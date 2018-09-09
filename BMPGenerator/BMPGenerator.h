@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 #include <cmath> 
+#include <ctime>
 
 #ifndef COMMON_BMPGENERATOR_H
 #define COMMON_BMPGENERATOR_H
@@ -59,7 +60,7 @@ typedef struct image
 } IMAGE;
 
 double GetValue(unsigned x, unsigned y);
+bool ValToRGB(double nVal, double nMin, double nMax, RGBTRIPLE* colour);
 bool generateBMP(char* name, bool fDiscardFileIfExists, LONG fWidth, LONG fHeight, double val_min, double val_max, double (*GetValue)(unsigned, unsigned));
-std::vector<std::pair<double, double>, BYTE> makeLegend (double val_min, double val_max);
 
 #endif
