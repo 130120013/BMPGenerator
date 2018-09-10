@@ -61,6 +61,7 @@ typedef struct image
 
 double GetValue(unsigned x, unsigned y);
 bool ValToRGB(double nVal, double nMin, double nMax, RGBTRIPLE* colour);
+double scaleBetween(double unscaledNum, double min, double max);
 bool generateBMP(char* name, bool fDiscardFileIfExists, LONG fWidth, LONG fHeight, double val_min, double val_max, double (*GetValue)(unsigned, unsigned));
 
 #endif
