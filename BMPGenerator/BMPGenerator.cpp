@@ -5,21 +5,24 @@
 #define LAST_RANGE_COLORS 1
 #define MAX_COLORS ((RANGES - 1) * RANGE_COLORS + LAST_RANGE_COLORS)
 
+#define TWO_PI 6.28
+
 double GetValue(unsigned x = 0, unsigned y = 0)
 {
-	return 0;
+	//return 0;
+	return std::sin((double) x * TWO_PI / 750) * std::sin((double) y * TWO_PI/100);
 }
 
-double scaleBetween(double unscaledNum, double min, double max) 
+unsigned scaleBetween(double unscaledNum, double min, double max) 
 {
-	return MAX_COLORS * (unscaledNum - min) / (max - min); //scale to [0; MAX_COLORS)
+	return unsigned(MAX_COLORS * (unscaledNum - min) / (max - min)); //scale to [0; MAX_COLORS)
 }
 
 bool ValToRGB(double nVal, double nMin, double nMax, RGBTRIPLE* colour)
 {
 	unsigned x;
 	unsigned nRange;
-	double nIntVal;
+	BYTE nIntVal;
 	double nValRange;
 
 	if (nMax < nMin)
@@ -44,6 +47,12 @@ bool ValToRGB(double nVal, double nMin, double nMax, RGBTRIPLE* colour)
 		nRange = (unsigned int)x / RANGE_COLORS;
 		nIntVal = x % RANGE_COLORS;
 	}
+	else
+	{
+		colour->rgbBlue = colour->rgbGreen = colour->rgbRed = 0xff;
+		return true;
+	}
+
 
 	switch (nRange)
 	{
@@ -162,27 +171,27 @@ bool generateBMP(char* name, bool fDiscardFileIfExists, LONG fWidth, LONG fHeigh
 	fwrite(&biClrImportant, DWORDSIZE, 1, fp);
 
 	//image
-	std::vector<std::vector<double>> heights;
-	srand(std::time(0));
+	//std::vector<std::vector<double>> heights;
+	//srand(std::time(0));
 
-	for (int k = 0; k < fWidth; ++k)
-	{
-		std::vector<double> temp;
-		for (int l = 0; l < fHeight; ++l)
-		{
-			temp.emplace_back(fmod(val_min + rand(), val_max));
-		}
-		heights.emplace_back(temp);
-	}
+	//for (int k = 0; k < fWidth; ++k)
+	//{
+	//	std::vector<double> temp;
+	//	for (int l = 0; l < fHeight; ++l)
+	//	{
+	//		temp.emplace_back(fmod(val_min + rand(), val_max));
+	//	}
+	//	heights.emplace_back(temp);
+	//}
 
-	heights[0][0] = -100;
+	//heights[0][0] = -100;
 
 	for (int k = 0; k < fWidth; ++k)
 	{
 		for (int l = 0; l < fHeight; ++l)
 		{
 			RGBTRIPLE rgb;
-			bool successCode = ValToRGB(heights[k][l], val_min, val_max, &rgb);
+			bool successCode = ValToRGB(GetValue(k, l), val_min, val_max, &rgb);
 			if(successCode) //but if successCode is false?
 			{
 				fwrite(&rgb.rgbBlue, 1, 1, fp);
@@ -201,7 +210,7 @@ int main(int argc, char **argv)
 {
 	double(*GetVal)(unsigned, unsigned);
 	GetVal = &GetValue;
-	generateBMP("Test15.bmp", true, 1500, 200, -200, 200, GetVal);
+	generateBMP("Test15.bmp", true, 1500, 200, -1, 1, GetVal);
 	system("pause");
 	return 0;
 }
