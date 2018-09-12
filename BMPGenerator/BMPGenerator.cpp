@@ -5,24 +5,21 @@
 #define LAST_RANGE_COLORS 1
 #define MAX_COLORS ((RANGES - 1) * RANGE_COLORS + LAST_RANGE_COLORS)
 
-#define TWO_PI 6.28
+#define LONGSIZE sizeof(std::int32_t) //4
+#define BYTESIZE sizeof(std::uint8_t) //1
+#define DWORDSIZE sizeof(std::uint32_t) //4
+#define WORDSIZE sizeof(std::uint16_t) //2
 
-double GetValue(unsigned x = 0, unsigned y = 0)
-{
-	//return 0;
-	return std::sin((double) x * TWO_PI / 750) * std::sin((double) y * TWO_PI/100);
-}
-
-unsigned scaleBetween(double unscaledNum, double min, double max) 
+static unsigned scaleBetween(double unscaledNum, double min, double max) 
 {
 	return unsigned(MAX_COLORS * (unscaledNum - min) / (max - min)); //scale to [0; MAX_COLORS)
 }
 
-bool ValToRGB(double nVal, double nMin, double nMax, RGBTRIPLE* colour)
+static bool ValToRGB(double nVal, double nMin, double nMax, RGBTRIPLE* colour)
 {
 	unsigned x;
 	unsigned nRange;
-	BYTE nIntVal;
+	std::uint8_t nIntVal;
 	double nValRange;
 
 	if (nMax < nMin)
@@ -52,7 +49,6 @@ bool ValToRGB(double nVal, double nMin, double nMax, RGBTRIPLE* colour)
 		colour->rgbBlue = colour->rgbGreen = colour->rgbRed = 0xff;
 		return true;
 	}
-
 
 	switch (nRange)
 	{
@@ -110,7 +106,7 @@ bool ValToRGB(double nVal, double nMin, double nMax, RGBTRIPLE* colour)
 	}
 }
 
-bool generateBMP(char* name, bool fDiscardFileIfExists, LONG fWidth, LONG fHeight, double val_min, double val_max, double (*GetValue)(unsigned, unsigned) )
+bool generateBMP(char* name, double val_min, double val_max, double (*GetValue)(unsigned, unsigned), std::int32_t fWidth, std::int32_t fHeight, bool fDiscardFileIfExists)
 {
 	FILE *fp;
 	if(fp = fopen(name, "r"))
@@ -124,71 +120,61 @@ bool generateBMP(char* name, bool fDiscardFileIfExists, LONG fWidth, LONG fHeigh
 	if(!fp)
 		return false;
 
-	BYTE bfType[2] = { 'B','M' };
+	std::uint8_t bfType[2] = { 'B','M' };
 	fwrite(&bfType[0], 2 * BYTESIZE, 1, fp);
 
-	DWORD bfSize = 54 + fWidth * fHeight * 3;
+	auto cbPadding = std::int32_t(4 - (fWidth & 3));
+	if (cbPadding == 4)
+		cbPadding = 0;
+	auto cbPaddedWidth = fWidth * 3 + cbPadding;
+	std::uint32_t bfSize = 54 + cbPaddedWidth * fHeight;
 	fwrite(&bfSize, DWORDSIZE, 1, fp);
 
 	// bfReserved1 + bfReserved2
-	DWORD reserved = 0;
+	std::uint32_t reserved = 0;
 	fwrite(&reserved, DWORDSIZE, 1, fp);
 
-	DWORD bfOffBits = 14;
+	std::uint32_t bfOffBits = 14;
 	fwrite(&bfOffBits, DWORDSIZE, 1, fp);
 
-	DWORD biSize = 40;
+	std::uint32_t biSize = 40;
 	fwrite(&biSize, DWORDSIZE, 1, fp);
 
-	LONG biWidth = fWidth;
+	std::int32_t biWidth = fWidth;
 	fwrite(&biWidth, LONGSIZE, 1, fp);
 
-	LONG biHeight = fHeight;
+	std::int32_t biHeight = fHeight;
 	fwrite(&biHeight, LONGSIZE, 1, fp);
 
-	WORD biPlanes = 1;
+	std::uint16_t biPlanes = 1;
 	fwrite(&biPlanes, WORDSIZE, 1, fp);
 
-	WORD biBitCount = 24;
+	std::uint16_t biBitCount = 24;
 	fwrite(&biBitCount, WORDSIZE, 1, fp);
 
-	DWORD biCompression = 0; //without compression
+	std::uint32_t biCompression = 0; //without compression
 	fwrite(&biCompression, DWORDSIZE, 1, fp);
 
-	DWORD biSizeImage = 0;
+	std::uint32_t biSizeImage = 0;
 	fwrite(&biSizeImage, DWORDSIZE, 1, fp);
 
-	LONG biXPelsPerMeter = 0;
+	std::int32_t biXPelsPerMeter = 0;
 	fwrite(&biXPelsPerMeter, LONGSIZE, 1, fp);
 
-	LONG biYPelsPerMeter = 0;
+	std::int32_t biYPelsPerMeter = 0;
 	fwrite(&biYPelsPerMeter, LONGSIZE, 1, fp);
 
-	DWORD biClrUsed = 0;
+	std::uint32_t biClrUsed = 0;
 	fwrite(&biClrUsed, DWORDSIZE, 1, fp);
 
-	DWORD biClrImportant = 0;
+	std::uint32_t biClrImportant = 0;
 	fwrite(&biClrImportant, DWORDSIZE, 1, fp);
 
-	//image
-	//std::vector<std::vector<double>> heights;
-	//srand(std::time(0));
+	static const std::uint32_t padding = 0;
 
-	//for (int k = 0; k < fWidth; ++k)
-	//{
-	//	std::vector<double> temp;
-	//	for (int l = 0; l < fHeight; ++l)
-	//	{
-	//		temp.emplace_back(fmod(val_min + rand(), val_max));
-	//	}
-	//	heights.emplace_back(temp);
-	//}
-
-	//heights[0][0] = -100;
-
-	for (int k = 0; k < fWidth; ++k)
+	for (int l = 0; l < fHeight; ++l)
 	{
-		for (int l = 0; l < fHeight; ++l)
+		for (int k = 0; k < fWidth; ++k)
 		{
 			RGBTRIPLE rgb;
 			bool successCode = ValToRGB(GetValue(k, l), val_min, val_max, &rgb);
@@ -199,18 +185,11 @@ bool generateBMP(char* name, bool fDiscardFileIfExists, LONG fWidth, LONG fHeigh
 				fwrite(&rgb.rgbRed, 1, 1, fp);
 			}
 		}
+		fwrite(&padding, 1, cbPadding, fp);
+
 	}
 
 	fclose(fp);
 	delete fp;
 	return true;
-}
-
-int main(int argc, char **argv)
-{
-	double(*GetVal)(unsigned, unsigned);
-	GetVal = &GetValue;
-	generateBMP("Test15.bmp", true, 1500, 200, -1, 1, GetVal);
-	system("pause");
-	return 0;
 }
