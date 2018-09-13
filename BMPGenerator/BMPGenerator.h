@@ -30,75 +30,17 @@ inline unsigned scaleBetween(double unscaledNum, double min, double max)
 }
 
 bool ValToRGB(double nVal, double nMin, double nMax, RGBTRIPLE* colour);
-FILE* CreateBitmapFile(FILE *fp, std::int32_t fWidth, std::int32_t fHeight, bool fDiscardFileIfExists);
+FILE* CreateBitmapFile(char* name, const std::int32_t fWidth, const std::int32_t fHeight, const bool fDiscardFileIfExists, int32_t* cbPadding);
 
 template <class Callable>
 bool generateBMP(char* name, double val_min, double val_max, Callable&& GetValue, std::int32_t fWidth, std::int32_t fHeight, bool fDiscardFileIfExists)
 {
-	FILE *fp;
-	if(fp = fopen(name, "r"))
-	{
-		if(!fDiscardFileIfExists)
-			return false;
-		fclose(fp);
-	}
-
-	fp = fopen(name, "wb");
-	if(!fp)
+	std::int32_t cbPadding; 
+	FILE* fp = CreateBitmapFile(name, fWidth, fHeight, fDiscardFileIfExists, &cbPadding);
+	if (!fp)
 		return false;
 
-	std::uint8_t bfType[2] = { 'B','M' };
-	fwrite(&bfType[0], 2 * BYTESIZE, 1, fp);
-
-	auto cbPadding = std::int32_t(4 - (fWidth & 3));
-	if (cbPadding == 4)
-		cbPadding = 0;
-	auto cbPaddedWidth = fWidth * 3 + cbPadding;
-	std::uint32_t bfSize = 54 + cbPaddedWidth * fHeight;
-	fwrite(&bfSize, DWORDSIZE, 1, fp);
-
-	// bfReserved1 + bfReserved2
-	std::uint32_t reserved = 0;
-	fwrite(&reserved, DWORDSIZE, 1, fp);
-
-	std::uint32_t bfOffBits = 14;
-	fwrite(&bfOffBits, DWORDSIZE, 1, fp);
-
-	std::uint32_t biSize = 40;
-	fwrite(&biSize, DWORDSIZE, 1, fp);
-
-	std::int32_t biWidth = fWidth;
-	fwrite(&biWidth, LONGSIZE, 1, fp);
-
-	std::int32_t biHeight = fHeight;
-	fwrite(&biHeight, LONGSIZE, 1, fp);
-
-	std::uint16_t biPlanes = 1;
-	fwrite(&biPlanes, WORDSIZE, 1, fp);
-
-	std::uint16_t biBitCount = 24;
-	fwrite(&biBitCount, WORDSIZE, 1, fp);
-
-	std::uint32_t biCompression = 0; //without compression
-	fwrite(&biCompression, DWORDSIZE, 1, fp);
-
-	std::uint32_t biSizeImage = 0;
-	fwrite(&biSizeImage, DWORDSIZE, 1, fp);
-
-	std::int32_t biXPelsPerMeter = 0;
-	fwrite(&biXPelsPerMeter, LONGSIZE, 1, fp);
-
-	std::int32_t biYPelsPerMeter = 0;
-	fwrite(&biYPelsPerMeter, LONGSIZE, 1, fp);
-
-	std::uint32_t biClrUsed = 0;
-	fwrite(&biClrUsed, DWORDSIZE, 1, fp);
-
-	std::uint32_t biClrImportant = 0;
-	fwrite(&biClrImportant, DWORDSIZE, 1, fp);
-
 	static const std::uint32_t padding = 0;
-
 	for (int l = 0; l < fHeight; ++l)
 	{
 		for (int k = 0; k < fWidth; ++k)
@@ -113,15 +55,59 @@ bool generateBMP(char* name, double val_min, double val_max, Callable&& GetValue
 			}
 		}
 		fwrite(&padding, 1, cbPadding, fp);
-
 	}
-
 	fclose(fp);
 	delete fp;
 	return true;
 }
 
-template <class Callable>
-bool generateBMP(char* name, Callable&& GetValue, std::int32_t fWidth, std::int32_t fHeight, bool fDiscardFileIfExists);
+template <class Iterator>
+auto Min(Iterator arrBegin, Iterator arrEnd) //todo
+{
+	auto tempMin = init_value(arrBegin, arrEnd);
+	for (auto i = arrBegin; i != arrEnd; ++i)
+		if (*i < tempMin)
+			tempMin = *i;
+	return tempMin;
+}
 
+template <class Iterator>
+auto Max(Iterator arrBegin, Iterator arrEnd) //todo
+{
+	auto tempMax = init_value(arrBegin, arrEnd);
+	for (auto i = arrBegin; i != arrEnd; ++i)
+		if (*i > tempMax)
+			tempMax = *i;
+	return tempMax;
+}
+
+template <class Callable>
+bool generateBMP(char* name, Callable&& GetValue, const std::int32_t fWidth, const std::int32_t fHeight, const bool fDiscardFileIfExists)
+{
+	std::int32_t cbPadding;
+	double val_min, double val_max;
+	FILE* fp = CreateBitmapFile(name, fWidth, fHeight, fDiscardFileIfExists, &cbPadding);
+	if (!fp)
+		return false;
+
+	static const std::uint32_t padding = 0;
+	for (int l = 0; l < fHeight; ++l)
+	{
+		for (int k = 0; k < fWidth; ++k)
+		{
+			RGBTRIPLE rgb;
+			bool successCode = ValToRGB(GetValue(k, l), val_min, val_max, &rgb);
+			if (successCode) //but if successCode is false?
+			{
+				fwrite(&rgb.rgbBlue, 1, 1, fp);
+				fwrite(&rgb.rgbGreen, 1, 1, fp);
+				fwrite(&rgb.rgbRed, 1, 1, fp);
+			}
+		}
+		fwrite(&padding, 1, cbPadding, fp);
+	}
+	fclose(fp);
+	delete fp;
+	return true;
+}
 #endif
