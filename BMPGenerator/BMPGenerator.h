@@ -41,6 +41,7 @@ bool generateBMP(char* name, double val_min, double val_max, Callable&& GetValue
 		return false;
 
 	static const std::uint32_t padding = 0;
+
 	for (int l = 0; l < fHeight; ++l)
 	{
 		for (int k = 0; k < fWidth; ++k)
@@ -62,22 +63,32 @@ bool generateBMP(char* name, double val_min, double val_max, Callable&& GetValue
 }
 
 template <class Iterator>
-auto Min(Iterator arrBegin, Iterator arrEnd) //todo
+auto Min(Iterator arrBegin, std::int32_t fWidth, std::int32_t fHeight) //todo
 {
-	auto tempMin = init_value(arrBegin, arrEnd);
-	for (auto i = arrBegin; i != arrEnd; ++i)
-		if (*i < tempMin)
-			tempMin = *i;
+	auto tempMin = arrBegin[0][0];
+	for (int l = 0; l < fHeight; ++l)
+	{
+		for (int k = 0; k < fWidth; ++k)
+		{
+			if (arrBegin[k][l] < tempMin)
+				tempMin = arrBegin[k][l];
+		}
+	}
 	return tempMin;
 }
 
 template <class Iterator>
-auto Max(Iterator arrBegin, Iterator arrEnd) //todo
+auto Max(Iterator arrBegin, std::int32_t fWidth, std::int32_t fHeight) //todo
 {
-	auto tempMax = init_value(arrBegin, arrEnd);
-	for (auto i = arrBegin; i != arrEnd; ++i)
-		if (*i > tempMax)
-			tempMax = *i;
+	auto tempMax = arrBegin[0][0];
+	for (int l = 0; l < fHeight; ++l)
+	{
+		for (int k = 0; k < fWidth; ++k)
+		{
+			if (arrBegin[k][l] > tempMax)
+				tempMax = arrBegin[k][l];
+		}
+	}
 	return tempMax;
 }
 
@@ -85,18 +96,31 @@ template <class Callable>
 bool generateBMP(char* name, Callable&& GetValue, const std::int32_t fWidth, const std::int32_t fHeight, const bool fDiscardFileIfExists)
 {
 	std::int32_t cbPadding;
-	double val_min, double val_max;
 	FILE* fp = CreateBitmapFile(name, fWidth, fHeight, fDiscardFileIfExists, &cbPadding);
 	if (!fp)
 		return false;
 
 	static const std::uint32_t padding = 0;
+	double** heightMatrix = new double*[fWidth];
+	for (int i = 0; i < fWidth; ++i)
+		heightMatrix[i] = new double[fHeight];
+
+	for (int l = 0; l < fHeight; ++l)
+	{
+		for (int k = 0; k < fWidth; ++k)
+		{
+			heightMatrix[k][l] = GetValue(k, l);
+		}
+	}
+	auto minVal = Min(heightMatrix, fWidth, fHeight);
+	auto maxVal = Max(heightMatrix, fWidth, fHeight);
+
 	for (int l = 0; l < fHeight; ++l)
 	{
 		for (int k = 0; k < fWidth; ++k)
 		{
 			RGBTRIPLE rgb;
-			bool successCode = ValToRGB(GetValue(k, l), val_min, val_max, &rgb);
+			bool successCode = ValToRGB(GetValue(k, l), minVal, maxVal, &rgb);
 			if (successCode) //but if successCode is false?
 			{
 				fwrite(&rgb.rgbBlue, 1, 1, fp);
