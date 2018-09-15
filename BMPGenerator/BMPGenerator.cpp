@@ -1,6 +1,6 @@
 #include "BMPGenerator.h"
 
-bool ValToRGB(double nVal, double nMin, double nMax, RGBTRIPLE* colour)
+bool ValToRGB(const double nVal, const double nMin, const double nMax, RGBTRIPLE* colour)
 {
 	unsigned x;
 	unsigned nRange;
@@ -91,7 +91,7 @@ bool ValToRGB(double nVal, double nMin, double nMax, RGBTRIPLE* colour)
 	}
 }
 
-FILE* CreateBitmapFile(char* name, const std::int32_t fWidth, const std::int32_t fHeight, const bool fDiscardFileIfExists, int32_t* cbPadding)
+FILE* CreateBitmapFile(const char* name, const std::int32_t fWidth, const std::int32_t fHeight, const bool fDiscardFileIfExists, int32_t* cbPadding)
 {
 	FILE *fp;
 	if (fp = fopen(name, "r"))
