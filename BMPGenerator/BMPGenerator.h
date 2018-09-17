@@ -62,7 +62,7 @@ bool generateBMP(const char* name, const double val_min, const double val_max, c
 	return true;
 }
 template <class Iterator>
-auto maxTask(Iterator arrBegin, Iterator arrEnd) //todo
+auto maxTask(Iterator arrBegin, const std::int32_t fWidth, const std::int32_t fHeight) //todo
 {
 	using value_type = typename std::iterator_traits<Iterator>::value_type;
 	constexpr auto PARALLEL_THRESHOLD = 1000;
@@ -71,8 +71,20 @@ auto maxTask(Iterator arrBegin, Iterator arrEnd) //todo
 		return Max<Iterator>(arrBegin, arrEnd);
 	std::vector<std::future<value_type>> futures;
 	futures.reserve(threadCount);
-	for (auto i = arrBegin; i < arrEnd; i += (N / threadCount))
+	int ost = fWidth * fHeight % threadCount;
+	int part = fWidth * fHeight / threadCount;
+	
+	while (i < arrBegin)
+	{
+		if (ost != 0) 
+			part += 1;
 		futures.emplace_back(std::async(std::launch::async, Max<Iterator>, i, i + N / threadCount));
+	}
+
+	for (auto i = arrBegin; i < arrEnd; i += (N / threadCount))
+	{
+		futures.emplace_back(std::async(std::launch::async, Max<Iterator>, i, i + N / threadCount));
+	}
 
 	std::vector<value_type> results;
 	results.reserve(futures.size());
@@ -82,7 +94,7 @@ auto maxTask(Iterator arrBegin, Iterator arrEnd) //todo
 }
 
 template <class Iterator>
-auto minTask(Iterator arrBegin, Iterator arrEnd) //todo
+auto minTask(Iterator arrBegin, Iterator arrEnd) //todo 
 {
 	using value_type = typename std::iterator_traits<Iterator>::value_type;
 	constexpr auto PARALLEL_THRESHOLD = 1000;
@@ -103,9 +115,10 @@ auto minTask(Iterator arrBegin, Iterator arrEnd) //todo
 
 
 template <class Iterator>
-auto Min(Iterator arrBegin, const std::int32_t fWidth, const std::int32_t fHeight)
+auto Min(Iterator arrBegin, const std::size_t offset, const std::int32_t countElements, const std::int32_t fWidth) //надо передать указатель на начальную строку в матрице, offset, количество элементов для обработки, ширину матрицы
 {
-	auto tempMin = arrBegin[0][0];
+	auto tempMin = *(arrBegin + offset);
+	auto 
 	for (int l = 0; l < fHeight; ++l)
 	{
 		for (int k = 0; k < fWidth; ++k)
