@@ -3,6 +3,14 @@
 #include <utility>
 #include <cmath>
 #include <cstdint>
+#include <future>
+#include <thread>
+#include <limits>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <iterator>
+#include <type_traits>
 
 #ifndef COMMON_BMPGENERATOR_H
 #define COMMON_BMPGENERATOR_H
@@ -61,29 +69,32 @@ bool generateBMP(const char* name, const double val_min, const double val_max, c
 	delete fp;
 	return true;
 }
+
 template <class Iterator>
-auto maxTask(Iterator arrBegin, const std::int32_t fWidth, const std::int32_t fHeight) //todo
+auto maxTask(Iterator arrBegin, Iterator arrEnd) 
 {
 	using value_type = typename std::iterator_traits<Iterator>::value_type;
-	constexpr auto PARALLEL_THRESHOLD = 1000;
+	constexpr auto PARALLEL_THRESHOLD = 10;
 	int threadCount = std::thread::hardware_concurrency();
 	if (arrEnd - arrBegin < PARALLEL_THRESHOLD || threadCount < 2)
 		return Max<Iterator>(arrBegin, arrEnd);
 	std::vector<std::future<value_type>> futures;
 	futures.reserve(threadCount);
-	int ost = fWidth * fHeight % threadCount;
-	int part = fWidth * fHeight / threadCount;
-	
-	while (i < arrBegin)
-	{
-		if (ost != 0) 
-			part += 1;
-		futures.emplace_back(std::async(std::launch::async, Max<Iterator>, i, i + N / threadCount));
-	}
+	int modulo = (arrEnd - arrBegin) % threadCount; //остаток
+	auto i = arrBegin;
 
-	for (auto i = arrBegin; i < arrEnd; i += (N / threadCount))
+	while (i < arrEnd)
 	{
-		futures.emplace_back(std::async(std::launch::async, Max<Iterator>, i, i + N / threadCount));
+		int part = (arrEnd - arrBegin) / threadCount; //сколько элементов в одном потоке
+		if (modulo != 0)
+			part += 1; //если остаток есть, то увеличиваем количество элементов в потоке на 1
+		auto iEnd = i + part;
+
+		futures.emplace_back(std::async(std::launch::async, Max<Iterator>, i, iEnd));
+
+		if (modulo != 0)
+			modulo -= 1;
+		i += part;
 	}
 
 	std::vector<value_type> results;
@@ -94,17 +105,31 @@ auto maxTask(Iterator arrBegin, const std::int32_t fWidth, const std::int32_t fH
 }
 
 template <class Iterator>
-auto minTask(Iterator arrBegin, Iterator arrEnd) //todo 
+auto minTask(Iterator arrBegin, Iterator arrEnd)
 {
 	using value_type = typename std::iterator_traits<Iterator>::value_type;
-	constexpr auto PARALLEL_THRESHOLD = 1000;
+	constexpr auto PARALLEL_THRESHOLD = 10;
 	int threadCount = std::thread::hardware_concurrency();
 	if (arrEnd - arrBegin < PARALLEL_THRESHOLD || threadCount < 2)
 		return Min<Iterator>(arrBegin, arrEnd);
 	std::vector<std::future<value_type>> futures;
 	futures.reserve(threadCount);
-	for (auto i = arrBegin; i < arrEnd; i += (N / threadCount))
-		futures.emplace_back(std::async(std::launch::async, Min<Iterator>, i, i + N / threadCount));
+	int modulo = (arrEnd - arrBegin) % threadCount; //остаток
+	auto i = arrBegin;
+
+	while (i < arrEnd)
+	{
+		int part = (arrEnd - arrBegin) / threadCount; //сколько элементов в одном потоке
+		if (modulo != 0)
+			part += 1; //если остаток есть, то увеличиваем количество элементов в потоке на 1
+		auto iEnd = i + part;
+
+		futures.emplace_back(std::async(std::launch::async, Min<Iterator>, i, iEnd));
+
+		if (modulo != 0)
+			modulo -= 1;
+		i += part;
+	}
 
 	std::vector<value_type> results;
 	results.reserve(futures.size());
@@ -113,34 +138,28 @@ auto minTask(Iterator arrBegin, Iterator arrEnd) //todo
 	return minTask(results.begin(), results.end());
 }
 
-
 template <class Iterator>
-auto Min(Iterator arrBegin, const std::size_t offset, const std::int32_t countElements, const std::int32_t fWidth) //надо передать указатель на начальную строку в матрице, offset, количество элементов для обработки, ширину матрицы
+auto Min(Iterator arrBegin, Iterator arrEnd)
 {
-	auto tempMin = *(arrBegin + offset);
-	auto 
-	for (int l = 0; l < fHeight; ++l)
+	auto tempMin = *(arrBegin);
+
+	for (auto it = arrBegin; it < arrEnd; ++it)
 	{
-		for (int k = 0; k < fWidth; ++k)
-		{
-			if (arrBegin[k][l] < tempMin)
-				tempMin = arrBegin[k][l];
-		}
+		if (*it < tempMin)
+			tempMin = *it;
 	}
 	return tempMin;
 }
 
 template <class Iterator>
-auto Max(Iterator arrBegin, const std::int32_t fWidth, const std::int32_t fHeight)
+auto Max(Iterator arrBegin, Iterator arrEnd)
 {
-	auto tempMax = arrBegin[0][0];
-	for (int l = 0; l < fHeight; ++l)
+	auto tempMax = *(arrBegin);
+
+	for (auto it = arrBegin; it < arrEnd; ++it)
 	{
-		for (int k = 0; k < fWidth; ++k)
-		{
-			if (arrBegin[k][l] > tempMax)
-				tempMax = arrBegin[k][l];
-		}
+		if (*it > tempMax)
+			tempMax = *it;
 	}
 	return tempMax;
 }
@@ -154,19 +173,19 @@ bool generateBMP(const char* name, const Callable&& GetValue, const std::int32_t
 		return false;
 
 	static const std::uint32_t padding = 0;
-	double** heightMatrix = new double*[fWidth];
-	for (int i = 0; i < fWidth; ++i)
-		heightMatrix[i] = new double[fHeight];
+	auto arrSize = fWidth * fHeight;
+	double* heightmatrix = new double[arrSize];
 
 	for (int l = 0; l < fHeight; ++l)
 	{
 		for (int k = 0; k < fWidth; ++k)
 		{
-			heightMatrix[k][l] = GetValue(k, l);
+			heightmatrix[l*fWidth + k] = GetValue(k, l);
 		}
 	}
-	auto minVal = Min(heightMatrix, fWidth, fHeight);
-	auto maxVal = Max(heightMatrix, fWidth, fHeight);
+
+	auto minVal = minTask(heightmatrix, heightmatrix + arrSize);
+	auto maxVal = maxTask(heightmatrix, heightmatrix + arrSize);
 
 	for (int l = 0; l < fHeight; ++l)
 	{
@@ -184,7 +203,6 @@ bool generateBMP(const char* name, const Callable&& GetValue, const std::int32_t
 		fwrite(&padding, 1, cbPadding, fp);
 	}
 	fclose(fp);
-	delete fp;
 	return true;
 }
 #endif

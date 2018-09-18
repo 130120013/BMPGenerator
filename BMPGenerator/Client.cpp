@@ -7,7 +7,7 @@ int main(int argc, char **argv)
 	std::cout << "Enter the desired width and height: ";
 	unsigned nWidth, nHeight;
 	std::cin >> nWidth >> nHeight;
-	generateBMP("Test16.bmp", [nWidth, nHeight] (auto x, auto y) -> auto 
+	generateBMP("Test17.bmp", [nWidth, nHeight] (auto x, auto y) -> auto 
 	{
 		double scaled_x = ((double) x) / (nWidth) - 0.5;
 		double scaled_y = ((double) y) / (nHeight) - 0.5;
