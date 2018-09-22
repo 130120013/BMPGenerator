@@ -230,6 +230,16 @@ inline unsigned scaleBetween(const double unscaledNum, const double min, const d
 	return unsigned(MAX_COLORS * (unscaledNum - min) / (max - min)); //scale from [min; max) to [0; MAX_COLORS)
 }
 
+template <class Iterator>
+void updateHeights(Iterator begin, Iterator end)
+{
+	for (auto it = begin; it != end; ++it)
+	{
+		if (*it < -500)
+			*it = 0;
+	}
+}
+
 bool ValToRGB(const double nVal, const double nMin, const double nMax, RGBTRIPLE* colour); //converts a value to a RGB colour
 FILE* CreateBitmapFile(const char* name, const std::int32_t fWidth, const std::int32_t fHeight, const bool fDiscardFileIfExists, int32_t* cbPadding); //creates a file with BMP headers
 
@@ -285,6 +295,51 @@ bool generateBMP(const char* name, const Callable&& GetValue, const std::int32_t
 
 	auto minmaxVal = extreme2Task(heightmatrix, heightmatrix + arrSize, std::less<double>());
 	if (minmaxVal.first == heightmatrix + arrSize)
+		return false;
+
+	for (int l = 0; l < fHeight; ++l)
+	{
+		for (int k = 0; k < fWidth; ++k)
+		{
+			RGBTRIPLE rgb;
+			bool successCode = ValToRGB(GetValue(k, l), *minmaxVal.first, *minmaxVal.second, &rgb);
+			if (successCode)
+			{
+				fwrite(&rgb.rgbBlue, 1, 1, fp);
+				fwrite(&rgb.rgbGreen, 1, 1, fp);
+				fwrite(&rgb.rgbRed, 1, 1, fp);
+			}
+		}
+		fwrite(&padding, 1, cbPadding, fp);
+	}
+	fclose(fp);
+	return true;
+}
+
+template <class Callable>
+bool generateBMP(const char* name, const Callable&& GetValue, int16_t* data, const std::int32_t fWidth, const std::int32_t fHeight, const bool fDiscardFileIfExists)
+{
+	std::int32_t cbPadding;
+	FILE* fp = CreateBitmapFile(name, fWidth, fHeight, fDiscardFileIfExists, &cbPadding);
+	if (!fp)
+		return false;
+
+	static const std::uint32_t padding = 0;
+	auto arrSize = fWidth * fHeight;
+	//double* heightmatrix = new double[arrSize];
+
+	//for (int l = 0; l < fHeight; ++l)
+	//{
+	//	for (int k = 0; k < fWidth; ++k)
+	//	{
+	//		heightmatrix[l*fWidth + k] = GetValue(k, l);
+	//	}
+	//}
+
+	updateHeights(data, data + arrSize);
+
+	auto minmaxVal = extreme2Task(data, data + arrSize, std::less<int16_t>());
+	if (minmaxVal.first == data + arrSize)
 		return false;
 
 	for (int l = 0; l < fHeight; ++l)

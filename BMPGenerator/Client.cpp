@@ -6,12 +6,24 @@ int main(int argc, char **argv)
 {
 	std::cout << "Enter the desired width and height: ";
 	unsigned nWidth, nHeight;
-	std::cin >> nWidth >> nHeight;
-	generateBMP("Test17.bmp", [nWidth, nHeight] (auto x, auto y) -> auto 
+	int16_t* heights = new int16_t[400 * 400];
+
+	for (int i = 0; i < 20 * 20; i++)
 	{
-		double scaled_x = ((double) x) / (nWidth) - 0.5;
-		double scaled_y = ((double) y) / (nHeight) - 0.5;
-		return scaled_x * scaled_x + scaled_y * scaled_y;
-	}, nWidth, nHeight, true);
+		heights[i] = -550 + i*i;
+	}
+	nWidth = 20;
+	//std::cin >> nWidth >> nHeight;
+	//generateBMP("Test17.bmp", [nWidth, nHeight] (auto x, auto y) -> auto 
+	//{
+	//	double scaled_x = ((double) x) / (nWidth) - 0.5;
+	//	double scaled_y = ((double) y) / (nHeight) - 0.5;
+	//	return scaled_x * scaled_x + scaled_y * scaled_y;
+	//}, nWidth, nHeight, true);
+
+	generateBMP("Card.bmp", [heights, nWidth](auto x, auto y) -> auto
+	{
+		return heights[y*nWidth + x];
+	}, heights, nWidth, nWidth, true);
 	return 0;
 }
