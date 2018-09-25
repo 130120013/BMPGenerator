@@ -118,54 +118,69 @@ unique_bmp_file_handle CreateBitmapFile(const char* name, std::uint32_t fWidth, 
 		return unique_bmp_file_handle();
 
 	std::uint8_t bfType[2] = { 'B','M' };
-	std::fwrite(&bfType[0], BYTESIZE, 2, fp.get());
+	if (std::fwrite(&bfType[0], BYTESIZE, 2, fp.get()) < 2 * BYTESIZE)
+		return unique_bmp_file_handle();
 	const std::uint32_t cbHeader = 54;
 
 	*cbPadding = std::uint32_t(fWidth & 3);
 
 	auto cbPaddedWidth = fWidth * 3 + *cbPadding;
 	std::uint32_t bfSize = cbHeader + cbPaddedWidth * fHeight;
-	std::fwrite(&bfSize, DWORDSIZE, 1, fp.get());
+	if(std::fwrite(&bfSize, DWORDSIZE, 1, fp.get()) < DWORDSIZE)
+		return unique_bmp_file_handle();
 
 	// bfReserved1 + bfReserved2
 	std::uint32_t reserved = 0;
-	std::fwrite(&reserved, DWORDSIZE, 1, fp.get());
+	if(std::fwrite(&reserved, DWORDSIZE, 1, fp.get()) < DWORDSIZE)
+		return unique_bmp_file_handle();
 
 	std::uint32_t bfOffBits = cbHeader;
-	std::fwrite(&bfOffBits, DWORDSIZE, 1, fp.get());
+	if(std::fwrite(&bfOffBits, DWORDSIZE, 1, fp.get()) < DWORDSIZE)
+		return unique_bmp_file_handle();
 
 	std::uint32_t biSize = 40;
-	std::fwrite(&biSize, DWORDSIZE, 1, fp.get());
+	if(std::fwrite(&biSize, DWORDSIZE, 1, fp.get()) < DWORDSIZE)
+		return unique_bmp_file_handle();
 
 	std::uint32_t biWidth = fWidth;
-	std::fwrite(&biWidth, LONGSIZE, 1, fp.get());
+	if(std::fwrite(&biWidth, LONGSIZE, 1, fp.get()) < LONGSIZE)
+		return unique_bmp_file_handle();
 
 	std::uint32_t biHeight = fHeight;
-	std::fwrite(&biHeight, LONGSIZE, 1, fp.get());
+	if(std::fwrite(&biHeight, LONGSIZE, 1, fp.get()) < LONGSIZE)
+		return unique_bmp_file_handle();
 
 	std::uint16_t biPlanes = 1;
-	std::fwrite(&biPlanes, WORDSIZE, 1, fp.get());
+	if(std::fwrite(&biPlanes, WORDSIZE, 1, fp.get()) < WORDSIZE)
+		return unique_bmp_file_handle();
 
 	std::uint16_t biBitCount = 24;
-	std::fwrite(&biBitCount, WORDSIZE, 1, fp.get());
+	if(std::fwrite(&biBitCount, WORDSIZE, 1, fp.get()) < WORDSIZE)
+		return unique_bmp_file_handle();
 
 	std::uint32_t biCompression = 0; //without compression
-	std::fwrite(&biCompression, DWORDSIZE, 1, fp.get());
+	if(std::fwrite(&biCompression, DWORDSIZE, 1, fp.get()) < DWORDSIZE)
+		return unique_bmp_file_handle();
 
 	std::uint32_t biSizeImage = 0;
-	std::fwrite(&biSizeImage, DWORDSIZE, 1, fp.get());
+	if(std::fwrite(&biSizeImage, DWORDSIZE, 1, fp.get()) < DWORDSIZE)
+		return unique_bmp_file_handle();
 
 	std::uint32_t biXPelsPerMeter = 0;
-	std::fwrite(&biXPelsPerMeter, LONGSIZE, 1, fp.get());
+	if(std::fwrite(&biXPelsPerMeter, LONGSIZE, 1, fp.get()) < LONGSIZE)
+		return unique_bmp_file_handle();
 
 	std::uint32_t biYPelsPerMeter = 0;
-	std::fwrite(&biYPelsPerMeter, LONGSIZE, 1, fp.get());
+	if(std::fwrite(&biYPelsPerMeter, LONGSIZE, 1, fp.get()) < LONGSIZE)
+		return unique_bmp_file_handle();
 
 	std::uint32_t biClrUsed = 0;
-	std::fwrite(&biClrUsed, DWORDSIZE, 1, fp.get());
+	if(std::fwrite(&biClrUsed, DWORDSIZE, 1, fp.get()) < DWORDSIZE)
+		return unique_bmp_file_handle();
 
 	std::uint32_t biClrImportant = 0;
-	std::fwrite(&biClrImportant, DWORDSIZE, 1, fp.get());
+	if(std::fwrite(&biClrImportant, DWORDSIZE, 1, fp.get()) < DWORDSIZE)
+		return unique_bmp_file_handle();
 
 	return fp;
 }
@@ -187,12 +202,16 @@ bool generateBMP(const char* name, const double* pData, std::uint32_t fWidth, st
 			bool successCode = ValToRGB(pData[k + l * fWidth], val_min, val_max, &rgb);
 			if(successCode)
 			{
-				std::fwrite(&rgb.rgbBlue, 1, 1, fp.get());
-				std::fwrite(&rgb.rgbGreen, 1, 1, fp.get());
-				std::fwrite(&rgb.rgbRed, 1, 1, fp.get());
+				if(std::fwrite(&rgb.rgbBlue, 1, 1, fp.get()) < 1)
+					return false;
+				if (std::fwrite(&rgb.rgbGreen, 1, 1, fp.get()) < 1)
+					return false;
+				if (std::fwrite(&rgb.rgbRed, 1, 1, fp.get()) < 1)
+					return false;
 			}
 		}
-		std::fwrite(&padding, 1, cbPadding, fp.get());
+		if (std::fwrite(&padding, 1, cbPadding, fp.get()) < 1)
+			return false;
 	}
 	return true;
 }
