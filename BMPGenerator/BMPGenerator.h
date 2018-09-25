@@ -63,7 +63,7 @@ struct impl_less_equal_t
 {
 	constexpr bool operator()(const T& x, const T& y) const
 	{
-		return m_compare(x, y) || !m_compare(x, y) && !m_compare(y, x);
+		return !m_compare(y, x);
 	}
 	impl_less_equal_t() = default;
 	explicit constexpr impl_less_equal_t(const Compare& compare) :m_compare(compare) {}
@@ -89,7 +89,7 @@ struct impl_greater_t
 {
 	constexpr bool operator()(const T& x, const T& y) const
 	{
-		return !m_compare(x, y) && (m_compare(x, y) || m_compare(y, x));
+		return m_compare(y, x);
 	}
 	impl_greater_t() = default;
 	explicit constexpr impl_greater_t(const Compare& compare) :m_compare(compare) {}
