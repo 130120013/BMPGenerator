@@ -1,5 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <utility>
 #include <cmath>
 #include <cstdint>
@@ -186,7 +185,7 @@ std::pair<Iterator, Iterator> extreme2Task(Iterator arrBegin, Iterator arrEnd, c
 		futures.emplace_back(std::async(std::launch::async, [greater](Iterator i, Iterator iEnd, CompareLess compLess) -> std::pair<Iterator, Iterator>
 		{
 			std::pair<Iterator, Iterator> res = std::pair<Iterator, Iterator>(i, i);
-			for (auto it = i; it < iEnd; ++it)
+			for (auto it = std::next(i); it < iEnd; ++it)
 			{
 				if(compLess(*it, *res.first))
 					res.first = it;
@@ -208,7 +207,7 @@ std::pair<Iterator, Iterator> extreme2Task(Iterator arrBegin, Iterator arrEnd, c
 			it_extremum.first = it_val.first;
 
 		if(greater(*it_val.second, *it_extremum.second))
-					it_extremum.second = it_val.second;
+			it_extremum.second = it_val.second;
 	}
 	return it_extremum;
 }
@@ -225,84 +224,32 @@ auto extreme2Task(Iterator arrBegin, Iterator arrEnd)
 	return extreme2Task(arrBegin, arrEnd, std::less<typename std::iterator_traits<Iterator>::value_type>());
 }
 
-inline unsigned scaleBetween(const double unscaledNum, const double min, const double max) 
+bool generateBMP(const char* name, const double* pData, std::uint32_t fWidth, std::uint32_t fHeight, double val_min, double val_max, bool fDiscardFileIfExists);
+
+bool generateBMP(const char* name, const double* pData, std::uint32_t fWidth, std::uint32_t fHeight, bool fDiscardFileIfExists);
+
+template <class Callable, class = decltype(std::declval<Callable&&>()(std::declval<std::uint32_t>(), std::declval<std::uint32_t>()))>
+bool generateBMP(const char* name, double val_min, double val_max, Callable&& GetValue, std::uint32_t fWidth, std::uint32_t fHeight, bool fDiscardFileIfExists) 
 {
-	return unsigned(MAX_COLORS * (unscaledNum - min) / (max - min)); //scale from [min; max) to [0; MAX_COLORS)
-}
+	auto heightmatrix = std::make_unique<double[]>(fWidth * fHeight);
 
-bool ValToRGB(const double nVal, const double nMin, const double nMax, RGBTRIPLE* colour); //converts a value to a RGB colour
-FILE* CreateBitmapFile(const char* name, const std::int32_t fWidth, const std::int32_t fHeight, const bool fDiscardFileIfExists, int32_t* cbPadding); //creates a file with BMP headers
-
-template <class Callable>
-bool generateBMP(const char* name, const double val_min, const double val_max, const Callable&& GetValue, const std::int32_t fWidth, const std::int32_t fHeight, const bool fDiscardFileIfExists) 
-{
-	std::int32_t cbPadding; 
-	FILE* fp = CreateBitmapFile(name, fWidth, fHeight, fDiscardFileIfExists, &cbPadding);
-	if (!fp)
-		return false;
-
-	static const std::uint32_t padding = 0;
-
-	for (int l = 0; l < fHeight; ++l)
-	{
-		for (int k = 0; k < fWidth; ++k)
-		{
-			RGBTRIPLE rgb;
-			bool successCode = ValToRGB(GetValue(k, l), val_min, val_max, &rgb);
-			if(successCode)
-			{
-				fwrite(&rgb.rgbBlue, 1, 1, fp);
-				fwrite(&rgb.rgbGreen, 1, 1, fp);
-				fwrite(&rgb.rgbRed, 1, 1, fp);
-			}
-		}
-		fwrite(&padding, 1, cbPadding, fp);
-	}
-	fclose(fp);
-	delete fp;
-	return true;
-}
-
-template <class Callable>
-bool generateBMP(const char* name, const Callable&& GetValue, const std::int32_t fWidth, const std::int32_t fHeight, const bool fDiscardFileIfExists)
-{
-	std::int32_t cbPadding;
-	FILE* fp = CreateBitmapFile(name, fWidth, fHeight, fDiscardFileIfExists, &cbPadding);
-	if (!fp)
-		return false;
-
-	static const std::uint32_t padding = 0;
-	auto arrSize = fWidth * fHeight;
-	double* heightmatrix = new double[arrSize];
-
-	for (int l = 0; l < fHeight; ++l)
-	{
-		for (int k = 0; k < fWidth; ++k)
-		{
+	for (std::uint32_t l = 0; l < fHeight; ++l)
+		for (std::uint32_t k = 0; k < fWidth; ++k)
 			heightmatrix[l*fWidth + k] = GetValue(k, l);
-		}
-	}
 
-	auto minmaxVal = extreme2Task(heightmatrix, heightmatrix + arrSize, std::less<double>());
-	if (minmaxVal.first == heightmatrix + arrSize)
-		return false;
-
-	for (int l = 0; l < fHeight; ++l)
-	{
-		for (int k = 0; k < fWidth; ++k)
-		{
-			RGBTRIPLE rgb;
-			bool successCode = ValToRGB(GetValue(k, l), *minmaxVal.first, *minmaxVal.second, &rgb);
-			if (successCode)
-			{
-				fwrite(&rgb.rgbBlue, 1, 1, fp);
-				fwrite(&rgb.rgbGreen, 1, 1, fp);
-				fwrite(&rgb.rgbRed, 1, 1, fp);
-			}
-		}
-		fwrite(&padding, 1, cbPadding, fp);
-	}
-	fclose(fp);
-	return true;
+	return generateBMP(name, heightmatrix.get(), fWidth, fHeight, val_min, val_max, fDiscardFileIfExists);
 }
+
+template <class Callable, class = decltype(std::declval<Callable&&>()(std::declval<std::uint32_t>(), std::declval<std::uint32_t>()))>
+bool generateBMP(const char* name, Callable&& GetValue, std::uint32_t fWidth, std::uint32_t fHeight, bool fDiscardFileIfExists)
+{
+	auto heightmatrix = std::make_unique<double[]>(fWidth * fHeight);
+
+	for (std::uint32_t l = 0; l < fHeight; ++l)
+		for (std::uint32_t k = 0; k < fWidth; ++k)
+			heightmatrix[l*fWidth + k] = GetValue(k, l);
+
+	return generateBMP(name, heightmatrix.get(), fWidth, fHeight, fDiscardFileIfExists);
+}
+
 #endif
