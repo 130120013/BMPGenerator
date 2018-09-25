@@ -118,19 +118,20 @@ unique_bmp_file_handle CreateBitmapFile(const char* name, std::uint32_t fWidth, 
 		return unique_bmp_file_handle();
 
 	std::uint8_t bfType[2] = { 'B','M' };
-	std::fwrite(&bfType[0], 2 * BYTESIZE, 1, fp.get());
+	std::fwrite(&bfType[0], BYTESIZE, 2, fp.get());
+	const std::uint32_t cbHeader = 54;
 
 	*cbPadding = std::uint32_t(fWidth & 3);
 
 	auto cbPaddedWidth = fWidth * 3 + *cbPadding;
-	std::uint32_t bfSize = 54 + cbPaddedWidth * fHeight;
+	std::uint32_t bfSize = cbHeader + cbPaddedWidth * fHeight;
 	std::fwrite(&bfSize, DWORDSIZE, 1, fp.get());
 
 	// bfReserved1 + bfReserved2
 	std::uint32_t reserved = 0;
 	std::fwrite(&reserved, DWORDSIZE, 1, fp.get());
 
-	std::uint32_t bfOffBits = 14;
+	std::uint32_t bfOffBits = cbHeader;
 	std::fwrite(&bfOffBits, DWORDSIZE, 1, fp.get());
 
 	std::uint32_t biSize = 40;
