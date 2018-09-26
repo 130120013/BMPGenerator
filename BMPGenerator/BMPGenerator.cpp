@@ -146,9 +146,14 @@ unique_bmp_file_handle CreateBitmapFile(const char* name, std::uint32_t fWidth, 
 	if(std::fwrite(&biWidth, LONGSIZE, 1, fp.get()) < LONGSIZE)
 		return unique_bmp_file_handle();
 
+<<<<<<< Updated upstream
 	std::uint32_t biHeight = fHeight;
 	if(std::fwrite(&biHeight, LONGSIZE, 1, fp.get()) < LONGSIZE)
 		return unique_bmp_file_handle();
+=======
+	std::uint32_t biHeight = (std::uint32_t) -(std::int32_t) fHeight;
+	std::fwrite(&biHeight, LONGSIZE, 1, fp.get());
+>>>>>>> Stashed changes
 
 	std::uint16_t biPlanes = 1;
 	if(std::fwrite(&biPlanes, WORDSIZE, 1, fp.get()) < WORDSIZE)
